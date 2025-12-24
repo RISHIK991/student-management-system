@@ -1,7 +1,22 @@
 from flask import Flask, render_template, request, redirect
 import sqlite3
 
+def init_db():
+    conn = sqlite3.connect("students.db")
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS students (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            branch TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
 app = Flask(__name__)
+init_db()
 
 def get_db():
     return sqlite3.connect("students.db")
