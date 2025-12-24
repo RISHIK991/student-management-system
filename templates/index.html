@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h1>Student Management System</h1>
+
+    <a href="/add">Add Student</a>
+    <hr>
+
+    {% if students %}
+        <ul>
+        {% for s in students %}
+            <li>
+                {{ s[1] }} - {{ s[2] }}
+                <span>
+                    <a href="/edit/{{ s[0] }}">Edit</a>
+                    <a href="/delete/{{ s[0] }}">Delete</a>
+                </span>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No students found</p>
+    {% endif %}
+</div>
+
+</body>
+</html>
+
