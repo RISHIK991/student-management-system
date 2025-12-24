@@ -1,72 +1,97 @@
-from flask import Flask, render_template, request, redirect
+import os
 import sqlite3
+from flask import Flask, render_template, request, redirect, url_for
+
+app = Flask(__name__)
+
+# Absolute path for database (IMPORTANT for Render)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "students.db")
+
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 def init_db():
-    conn = sqlite3.connect("students.db")
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS students (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            branch TEXT
+            name TEXT NOT NULL,
+            branch TEXT NOT NULL
         )
     """)
     conn.commit()
     conn.close()
 
 
-app = Flask(__name__)
+# Initialize DB when app starts
 init_db()
 
-def get_db():
-    return sqlite3.connect("students.db")
 
 @app.route("/")
 def index():
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("SELECT * FROM students")
-    data = cur.fetchall()
-    con.close()
-    return render_template("index.html", students=data)
+    conn = get_db_connection()
+    students = conn.execute("SELECT * FROM students").fetchall()
+    conn.close()
+    return render_template("index.html", students=students)
 
-@app.route("/add", methods=["GET","POST"])
+
+@app.route("/add", methods=["GET", "POST"])
 def add():
     if request.method == "POST":
         name = request.form["name"]
         branch = request.form["branch"]
-        con = get_db()
-        cur = con.cursor()
-        cur.execute("INSERT INTO students VALUES(NULL,?,?)",(name,branch))
-        con.commit()
-        con.close()
-        return redirect("/")
+
+        conn = get_db_connection()
+        conn.execute(
+            "INSERT INTO students (name, branch) VALUES (?, ?)",
+            (name, branch),
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for("index"))
+
     return render_template("add.html")
 
-@app.route("/edit/<int:id>", methods=["GET","POST"])
+
+@app.route("/edit/<int:id>", methods=["GET", "POST"])
 def edit(id):
-    con = get_db()
-    cur = con.cursor()
+    conn = get_db_connection()
+
     if request.method == "POST":
         name = request.form["name"]
         branch = request.form["branch"]
-        cur.execute("UPDATE students SET name=?, branch=? WHERE id=?",(name,branch,id))
-        con.commit()
-        return redirect("/")
-    cur.execute("SELECT * FROM students WHERE id=?", (id,))
-    student = cur.fetchone()
-    con.close()
+
+        conn.execute(
+            "UPDATE students SET name=?, branch=? WHERE id=?",
+            (name, branch, id),
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for("index"))
+
+    student = conn.execute(
+        "SELECT * FROM students WHERE id=?",
+        (id,),
+    ).fetchone()
+    conn.close()
+
     return render_template("edit.html", student=student)
+
 
 @app.route("/delete/<int:id>")
 def delete(id):
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("DELETE FROM students WHERE id=?", (id,))
-    con.commit()
-    con.close()
-    return redirect("/")
+    conn = get_db_connection()
+    conn.execute("DELETE FROM students WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("index"))
+
 
 if __name__ == "__main__":
     app.run()
-
